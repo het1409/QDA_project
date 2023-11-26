@@ -1,0 +1,247 @@
+---
+title: "CS5801 Coursework Template Proforma"
+author: "student-id"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+version: 1
+---
+
+# 0. Instructions 
+
+*1. Remove the (italicised) guidance text but keep the section headings.*  
+*2. Add as many chunks of R code as required.*  
+*3. Where relevant summarise your answer to a section at the top of the section then add descriptions of your analysis plans and explanations of your code and findings. Please be detailed and where you have made choices explain the rationale for them. Avoid including any generic definitions.*  
+*4. Write your report using RMarkdown.  For guidance see a [helpful blog](https://www.dataquest.io/blog/r-markdown-guide-cheatsheet/#tve-jump-17333da0719) or use the R Markdown cheatsheet which can be accessed from within RStudio by selecting `Help > Cheatsheets > R Markdown Cheat Sheet`.*  
+*5. Your report should be clearly and professionally presented with appropriate use of cited external sources You report should respect the word counts in each section. (5 marks)*  
+*6. It should also be easy to understand, with well-documented code following the principles of literate programming. (5 marks)*
+
+
+```{r}
+# Add code here to load all the required libraries with `library()`.
+
+# Do not include any `install.package()` for any required packages in this rmd file.
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+```
+
+
+# 1. Organise and clean the data
+
+## 1.1 Subset the data into the specific dataset allocated
+ 
+*A description of the data set provided, its contents and which subset you should select is documented in the assessment brief at CS5801-Assessment Brief Template 2023-24.pdf*  
+
+*Use R code to correctly select the subset of data allocated. (5 marks)*  
+
+```{r}
+# Only change the value for SID 
+# Assign your student id into the variable SID, for example:
+SID <- 2329524                  # This is an example, replace 2101234 with your actual ID
+SIDoffset <- (SID %% 50) + 1    # Your SID mod 50 + 1
+
+load("car-analysis-data.Rda")
+# Now subset the car data set
+# Pick every 50th observation starting from your offset
+# Put into your data frame named mydf (you can rename it)
+mydf <- cars.analysis[seq(from=SIDoffset,to=nrow(cars.analysis),by=50),]
+
+
+
+
+
+```
+
+
+## 1.2 Data quality analysis plan
+ 
+*Provide a description of a comprehensive plan to assess the quality of this data. Include all variables/columns (5 marks) from the data set. (Max 200 words)*
+
+
+
+## 1.3 Data quality analysis findings
+
+*Provide a full implementation of your data quality plan from (1.2) Include all variables/columns from the data set and  (5 marks).(Max 100 words)*
+```{r}
+#summarize the data
+summary(mydf)
+
+#To calculate number of NA's in the table
+colSums(is.na(mydf))
+sum(is.na(mydf))
+
+#Further exploration of data for each column
+unique(mydf$fuel)
+unique(mydf$drivetrain)
+
+
+#Replacing negative values with median values  of max_mpg
+median_max_mpg = median(mydf$max_mpg[mydf$max_mpg > 0], na.rm = TRUE)
+mydf$max_mpg[mydf$max_mpg < 0] = median_max_mpg
+
+#Replacing NA's with median values of max_mpg
+mydf$max_mpg[is.na(mydf$max_mpg)] = median_max_mpg  #max_mpg NA's replaced
+
+#Replacing NA's with median values of min_mpg
+median_min_mpg = median(mydf$min_mpg[mydf$min_mpg > 0], na.rm = TRUE)
+mydf$min_mpg[is.na(mydf$min_mpg)] = median_min_mpg
+
+#Dropping NA values for categorical values (enginesize)
+median_engine_size = median(mydf$engine_size[mydf$engine_size > 0], na.rm = TRUE)
+mydf$engine_size[is.na(mydf$engine_size)] = median_engine_size
+
+#Drop NA values for categorical values (damaged, first_owner)
+mydf = mydf %>%
+  filter(!is.na(mydf$damaged))
+
+mydf = mydf %>%
+  filter(!is.na(mydf$first_owner))
+
+#Drop "Unknown" values in drivetrain
+mydf = mydf %>%
+  filter(drivetrain != "Unknown")
+
+#Check for spelling errors
+mydf[mydf$fuel == "Pertol", "fuel"] = "Petrol"
+unique(mydf$fuel)
+table(mydf$fuel)
+
+summary(mydf)
+
+```
+
+ 
+## 1.4 Data cleaning  
+ 
+*List and explain all the data quality issues found in 1.3 (5 marks)  NB even if no data quality issues are identified you should still check and report. Justify and document the way you have addressed each of the issues found (if any) (5 marks). (Max 200 words)*
+
+- Negative values in "max_mpg"
+- NA's in "min_mpg", "max_mpg", "enginesize", "damaged", "first_owner"
+- "Unknown" values in drivetrain
+- Spelling error in "fuel"
+
+
+# 2. Exploratory Data Analysis (EDA)
+
+## 2.1 EDA plan
+
+*Outline a suitable plan to explore, describe and visualise your data. This plan should include appropriate summary statistics (uni- and multi-variate) and visualisations. The plan should also outline how you plan to explore the data with respect to the dependent variables  (5 marks) (Max 200 words)*  
+
+## 2.2 EDA execution   
+
+*Undertake the data exploration plan outlined in 2.1 (5 marks) (Max 100 words)*
+```{r}
+ggplot(data = mydf, aes(x = reorder(brand, price), y = price)) + geom_bar(stat = "summary", fun  = "mean", fill = "skyblue") +
+   labs(title = "Average Price by brand", x = "brands", y = "Average Price") + theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) #To adjust the "brand names" [taken from "ChatGpt" (line:140)]
+```
+# Grpah for price and fuel type
+
+```{r}
+ggplot(data = mydf, aes(x = reorder(fuel,price), y = price)) + geom_bar(stat = "summary", fun = "mean", fill = "lightgreen") + labs(title = "Average price by fuel", x = "fuel", y = "Average price")
+```
+```{r}
+ggplot(data = mydf, aes(x = reorder(drivetrain, price), y = price)) + geom_bar(stat = "summary", fun = "mean", fill = "green") + labs(title = "Average price by drivetrain") 
+```
+```{r}
+mydf$damaged = factor(mydf$damaged, levels = c(0,1), labels = c("Not Damaged", "Damaged"))
+
+ggplot(data = mydf, aes(x = damaged, y = price)) + geom_boxplot()
+```
+```{r}
+mydf$first_owner = factor(mydf$first_owner, levels = c(0,1), labels = c("Not first Owner", "First owner"))
+
+ggplot(data = mydf, aes(x = first_owner, y = price)) + geom_bar(stat = "summary", fun = "mean", fill = "orange")
+```
+
+
+
+
+## 2.3 EDA summary of results
+
+*Provide a concise summary of your findings (5 marks) (Max 300 words)*
+
+## 2.4 Additional insights and issues
+
+*Highlight potential further issues or insights uncovered in 2.2.  This might include follow up to findings from your initial EDA.  We accept that the boundary between 2.2 and 2.3 is somewhat arbitrary so use your judgement and maximise good structure and readability. (5 marks) (Max 200 words)*
+
+
+# 3. Modelling
+
+## 3.1 Explain your analysis plan
+
+*The aim of the analysis is to model used car prices. Outline and justify an analysis plan to address the aim that incorporates/references any findings from the data cleaning (1.4) and EDA (2.3, 2.4)  (5 marks). (Max 200 words)*
+
+## 3.2 Build a model for car price
+*Use R to build a suitable model to model used car prices on your data (dependent variable is price) (5 marks). (Max 100 words)*  
+*NB Submissions where suitable models do not have good fit due to the nature of the data will not be penalised.*  
+
+
+
+```{r}
+# #To analyze relationship between "price" and "first_owner"
+# model_1 = lm(mydf$price~mydf$first_owner, data = mydf)
+# summary(model_1)
+#plot(model_1)
+```
+
+```{r}
+# #To analyze relationship between "price" and "mileage"
+# model_2 = lm(mydf$price~mydf$mileage, data = mydf)
+# summary(model_2)
+```
+
+```{r}
+# plot(model_2)
+```
+
+
+```{r}
+# model_3 = lm(mydf$price~mydf$mileage)
+# summary(model_3)
+```
+```{r}
+# plot(model_3)
+```
+
+```{r}
+#Making model with multiple regression
+model_4 = lm(mydf$price ~ mydf$engine_size + mydf$min_mpg)
+model_4
+plot(model_4)
+```
+
+```{r}
+model_5 = lm(mydf$price ~ mydf$drivetrain + mydf$engine_size)
+model_5
+plot(model_5)
+```
+
+
+## 3.3 Critique model using relevant diagnostics
+
+*Offer an interpretation of the model, goodness of fit and graphical diagnostics (5 marks) for the model built in 3.2. Explain any potential weaknesses (5 marks). (Max 200 words)*
+
+
+## 3.4 Suggest and implement improvements to your model
+
+*Based on the findings in 3.2 and 3.3 articulate and include one possible alternative approach to address the model weaknesses articulated in 3.3. Explain which model (from the ones in 3.2 and 3.4) you propose and why (5 marks). (Max 200 words)*
+
+
+# 4. Modelling another dependent variable
+
+## 4.1 Model the likelihood of a car being sold by the first owner (using the first_owner variable provided).
+
+*The aim of the analysis is to model whether a car is being sold by the first owner or not. (i.e., involving the binary target attribute).* 
+*Provide a plan of analysis based on relevant EDA for this attribute. Execute the plan and address any weaknesses of the model and explore methods to improve it (10 marks).* 
+*Justify and propose one model. Describe, explain and critique it (10 marks).*
+*(Max 500 words)*
+*NB Submissions where suitable models do not have good fit due to the nature of the data will not be penalised.* 
+
+# References  
+
+*Add any references here including references to use of GenAI. NB You can either do this manually or automatically with a `.bib` file (which then must be submitted along with your `.Rmd` file).  See the RMarkdown [documentation](https://bookdown.org/yihui/rmarkdown-cookbook/bibliography.html) for guidance.*    
